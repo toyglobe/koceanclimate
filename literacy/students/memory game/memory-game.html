@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>해양기후 메모리 게임 – 한반도 해양기후 정보 서비스</title>
+
+<!--
+  ════════════════════════════════════════════════════════════════
+  ▶ 이 파일은 업로드해주신 preview.html 데모의 레이아웃·사이즈·스타일을
+  그대로 따릅니다 (헤더/통계 박스, 설정 패널, 버튼, 카드 비율 64:89,
+  인라인 완료 화면 등). 다른 점은 카드 그림을 실제 이미지로 사용하고,
+  게임 인트로/설명 팝업/학습 가이드 갤러리를 추가한 것뿐입니다.
+
+  ▶ GitHub 업로드 호환을 위해 이미지 파일명을 전부 영문/숫자/언더스코어로
+  변경했습니다 (예: 엘니뇨_그림.png → elnino_card.png). 매핑표는 대화
+  답변을 참고해주세요.
+
+  ※ 라니냐·엘니뇨·컨베이어벨트·IOD 그림 4개는 원본이 90도 회전되어 있지만,
+    요청에 따라 보정 없이 업로드하신 원본 그대로 사용합니다
+    (rotate: false). 필요하시면 각 항목의 rotate 값을 true로 바꾸면
+    -90도 보정이 다시 적용됩니다 (.front img.rot-fix 규칙 참고).
+  ════════════════════════════════════════════════════════════════
+-->
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Pretendard,"Noto Sans KR",Arial,sans-serif;background:linear-gradient(180deg,#eaf7ff 0%,#f7fbff 45%,#eef8fb 100%);color:#12324a;min-height:100vh;position:relative;overflow-x:hidden}
+/* 배경 장식: 흐릿한 컬러 블롭 + 물결 패턴으로 허전함 보완 */
+body::before,body::after{content:'';position:fixed;border-radius:50%;filter:blur(70px);z-index:-2;pointer-events:none}
+body::before{width:440px;height:440px;background:#a6def7;opacity:.45;top:-140px;left:-120px}
+body::after{width:400px;height:400px;background:#bfe9d8;opacity:.4;bottom:-160px;right:-100px}
+.bg-wave{position:fixed;left:0;right:0;bottom:0;height:220px;z-index:-1;pointer-events:none;opacity:.5;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 220'%3E%3Cpath fill='%23d7f0fb' d='M0,80 C240,140 480,20 720,60 C960,100 1200,160 1440,90 L1440,220 L0,220 Z'/%3E%3Cpath fill='%23eaf7ff' d='M0,130 C300,190 600,90 900,120 C1140,145 1300,180 1440,150 L1440,220 L0,220 Z'/%3E%3C/svg%3E") no-repeat bottom/cover;
+}
+.wrap{width:min(1180px,96vw);margin:auto;padding:24px 0 36px;position:relative;z-index:1}
+
+/* ── 콘텐츠를 담는 '무대' 카드 (빈 배경에 그라운딩) ── */
+.stage{background:rgba(255,255,255,.6);backdrop-filter:blur(6px);border:1px solid rgba(217,232,241,.8);border-radius:26px;padding:22px 22px 28px;box-shadow:0 10px 34px rgba(25,75,105,.08)}
+@media(max-width:700px){.stage{padding:16px 14px 22px;border-radius:18px}}
+
+/* ── 사이트 복귀 바 (데모에는 없는 사이트 연동용 상단 바) ── */
+.site-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.site-back{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#4a7088;text-decoration:none}
+.site-back:hover{color:#166d9c}
+.guide-open{font-size:13px;color:#166d9c;background:#edf8fc;border:1px solid #bcd9e8;border-radius:10px;padding:7px 13px;cursor:pointer;font-weight:700}
+.guide-open:hover{background:#dff1f9}
+
+header{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-bottom:18px}
+h1{margin:0;font-size:clamp(28px,4vw,48px)}
+.subtitle{margin:8px 0 0;color:#4a7088}
+.stats{display:flex;gap:10px;flex-wrap:wrap}
+.stat{background:#fff;border:1px solid #d9e8f1;border-radius:14px;padding:10px 14px;min-width:92px;text-align:center}
+.stat b{display:block;font-size:22px}
+
+.setup{background:#fff;border:1px solid #d9e8f1;border-radius:16px;padding:14px 16px;margin:14px 0}
+.setup-row,.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.field{display:flex;align-items:center;gap:7px}
+label{font-weight:800}
+select{border:1px solid #bcd9e8;border-radius:10px;padding:9px 10px;background:#fff;font-weight:700}
+.badge{padding:8px 11px;border-radius:10px;background:#edf8fc;font-weight:800;color:#17658d}
+.msg{margin-top:9px;font-size:13px;color:#5e7f91}
+.msg.error{color:#b64646;font-weight:800}
+
+button{border:0;border-radius:12px;padding:11px 16px;font-weight:800;cursor:pointer;background:#166d9c;color:#fff;font-size:15px}
+button.secondary{background:#fff;color:#166d9c;border:1px solid #bcd9e8}
+button:disabled{opacity:.45;cursor:not-allowed}
+.controls{margin:12px 0 18px}
+.hint{font-size:14px;color:#56788c}
+
+.board{display:grid;gap:10px;width:100%;margin:auto}
+.card{position:relative;aspect-ratio:64/89;cursor:pointer;user-select:none;min-width:0;border-radius:14px;overflow:hidden;box-shadow:0 7px 18px rgba(25,75,105,.14);transition:box-shadow .2s}
+.card.matched{box-shadow:0 7px 18px rgba(25,75,105,.14),0 0 0 3px rgba(79,180,135,.45)}
+/* 카드를 실제 크기의 2배로 그린 뒤 절반으로 축소 — 뒤집기(3D transform) 시
+   브라우저가 저해상도로 레이어를 래스터화해 흐려지는 현상을 방지합니다. */
+.card-zoom{position:absolute;top:0;left:0;width:200%;height:200%;transform:scale(.5);transform-origin:top left;perspective:1800px}
+.inner{position:absolute;width:100%;height:100%;transform-style:preserve-3d;transition:transform .38s;will-change:transform}
+.card.flipped .inner,.card.matched .inner{transform:rotateY(180deg)}
+.face{position:absolute;width:100%;height:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:translateZ(0);overflow:hidden}
+.back{background:linear-gradient(145deg,#0d547d,#1280a6);border:6px solid rgba(255,255,255,.9)}
+.back img{width:100%;height:100%;object-fit:cover}
+.front{transform:rotateY(180deg) translateZ(0);background:#fff;border:4px solid #cfe5ef}
+.front img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.front img.rot-fix{transform:rotate(-90deg) scale(1.3334)}
+.card.matched .front{border-color:#7ac2a5}
+
+.finish{display:none;margin-top:20px;background:#fff;border:1px solid #d7e8f0;border-radius:18px;padding:22px;text-align:center}
+.finish.show{display:block}
+
+@media(max-width:700px){.wrap{width:94vw}.board{gap:7px}.card{border-radius:9px}}
+
+/* ── 게임 인트로 ── */
+.intro-overlay{position:fixed;inset:0;background:rgba(18,50,74,.6);display:flex;align-items:center;justify-content:center;z-index:320;padding:20px}
+.intro-overlay.hide{display:none}
+.intro-box{background:#fff;border-radius:18px;padding:18px 18px 22px;max-width:340px;width:100%;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.intro-box img{width:100%;border-radius:12px;margin-bottom:16px;display:block}
+
+/* ── 매칭 성공 팝업 ── */
+.match-overlay{position:fixed;inset:0;background:rgba(18,50,74,.55);display:none;align-items:center;justify-content:center;z-index:300;padding:24px}
+.match-overlay.show{display:flex}
+.match-box{background:#fff;border-radius:16px;padding:12px;max-width:340px;width:100%;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.match-box img{width:100%;border-radius:10px;display:block;cursor:zoom-in}
+.match-close{position:absolute;top:-13px;right:-13px;width:30px;height:30px;border-radius:50%;background:#fff;border:1px solid #d9e8f1;color:#12324a;display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:800;box-shadow:0 4px 10px rgba(0,0,0,.15)}
+.zoom-hint{text-align:center;font-size:11.5px;color:#8fa8b8;margin-top:8px}
+
+/* ── 이미지 확대 라이트박스 (카드 속 글자가 작게 보일 때 크게 보기) ── */
+.lightbox-overlay{position:fixed;inset:0;background:rgba(10,25,40,.85);display:none;align-items:center;justify-content:center;z-index:400;padding:26px}
+.lightbox-overlay.show{display:flex}
+.lightbox-overlay img{max-width:min(520px,92vw);max-height:88vh;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.lightbox-close{position:fixed;top:20px;right:22px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-weight:800;cursor:pointer;font-size:16px}
+
+/* ── 학습 가이드 갤러리 ── */
+.guide-overlay{position:fixed;inset:0;background:rgba(18,50,74,.55);display:none;align-items:center;justify-content:center;z-index:305;padding:24px}
+.guide-overlay.show{display:flex}
+.guide-box{background:#fff;border-radius:16px;padding:20px;max-width:960px;width:100%;max-height:84vh;overflow-y:auto;position:relative}
+.guide-box h3{margin:0 0 14px;font-size:18px}
+.guide-close{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;background:#edf8fc;border:none;color:#166d9c;cursor:pointer;font-weight:800}
+.guide-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:600px){.guide-grid{grid-template-columns:repeat(2,1fr)}}
+.guide-grid img{width:100%;border-radius:10px;border:1px solid #d9e8f0;cursor:zoom-in}
+</style>
+</head>
+<body>
+<div class="bg-wave"></div>
+<div class="wrap">
+
+<div class="site-bar">
+  <a class="site-back" href="../../../students.html#memory-game">← 학생용 페이지로 돌아가기</a>
+  <button class="guide-open" id="guideOpenBtn">📖 학습 가이드</button>
+</div>
+
+<div class="stage">
+
+<header>
+  <div>
+    <h1>해양기후 메모리 게임</h1>
+    <p class="subtitle">가로·세로 카드 수를 직접 선택해 게임을 시작하세요.</p>
+  </div>
+  <div class="stats">
+    <div class="stat">시간<b id="time">0:00</b></div>
+    <div class="stat">시도<b id="moves">0</b></div>
+    <div class="stat">완성<b><span id="matches">0</span>/<span id="target">16</span></b></div>
+  </div>
+</header>
+
+<section class="setup">
+  <div class="setup-row">
+    <div class="field"><label for="cols">가로</label>
+      <select id="cols">
+        <option>2</option><option>3</option><option>4</option><option>5</option>
+        <option>6</option><option>7</option><option selected>8</option>
+      </select>개
+    </div>
+    <div class="field"><label for="rows">세로</label>
+      <select id="rows">
+        <option>2</option><option>3</option><option selected>4</option><option>5</option>
+        <option>6</option><option>7</option><option>8</option>
+      </select>개
+    </div>
+    <div class="badge">총 <span id="total">32</span>장</div>
+    <button id="apply">이 크기로 시작</button>
+  </div>
+  <div id="msg" class="msg">총 카드 수는 짝수여야 하며, 보유한 주제가 16개라 최대 32장까지 선택할 수 있습니다.</div>
+</section>
+
+<div class="controls">
+  <button id="restart">현재 크기로 다시 시작</button>
+  <button id="peek" class="secondary">3초 미리보기</button>
+  <span class="hint">첫 카드를 뒤집으면 시간이 시작됩니다.</span>
+</div>
+
+<main id="board" class="board"></main>
+
+<section id="finish" class="finish">
+  <h2>🎉 모든 카드를 찾았습니다!</h2>
+  <p>총 <strong id="finalMoves">0</strong>번 시도 · <strong id="finalTime">0:00</strong></p>
+  <button id="again">한 번 더 하기</button>
+</section>
+
+</div><!-- /stage -->
+
+</div>
+
+<!-- 게임 인트로 -->
+<div class="intro-overlay" id="introOverlay">
+  <div class="intro-box">
+    <img src="images/game_intro.png" alt="게임 설명">
+    <button id="introStartBtn" style="width:100%">🎮 게임 시작하기</button>
+  </div>
+</div>
+
+<!-- 매칭 성공 팝업 -->
+<div class="match-overlay" id="matchOverlay">
+  <div class="match-box">
+    <button class="match-close" id="matchClose">✕</button>
+    <img id="matchImg" src="" alt="설명">
+    <div class="zoom-hint">🔍 이미지를 탭하면 크게 볼 수 있어요</div>
+  </div>
+</div>
+
+<!-- 학습 가이드 갤러리 -->
+<div class="guide-overlay" id="guideOverlay">
+  <div class="guide-box">
+    <button class="guide-close" id="guideCloseBtn">✕</button>
+    <h3>📖 해양기후 용어 학습 가이드</h3>
+    <div class="guide-grid" id="guideGrid"></div>
+  </div>
+</div>
+
+<!-- 이미지 확대 라이트박스 -->
+<div class="lightbox-overlay" id="lightboxOverlay">
+  <button class="lightbox-close" id="lightboxClose">✕</button>
+  <img id="lightboxImg" src="" alt="확대 이미지">
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   카드 데이터 — 업로드해주신 실제 이미지(16개 주제) 사용
+   라니냐·엘니뇨·컨베이어벨트·IOD 4개는 원본이 90도 회전되어 있지만,
+   요청에 따라 보정 없이 원본 그대로 사용합니다(rotate:false).
+   ════════════════════════════════════════════════════════════════ */
+const DATA=[
+{id:"air_temp",kr:"해상기온",img:"images/air_temp_card.png",descImg:"images/air_temp_info.png",rotate:false},
+{id:"conveyor",kr:"컨베이어벨트",img:"images/conveyor_card.png",descImg:"images/conveyor_info.png",rotate:false},
+{id:"elnino",kr:"엘니뇨",img:"images/elnino_card.png",descImg:"images/elnino_info.png",rotate:false},
+{id:"iod",kr:"인도양 쌍극진동",img:"images/iod_card.png",descImg:"images/iod_info.png",rotate:false},
+{id:"lanina",kr:"라니냐",img:"images/lanina_card.png",descImg:"images/lanina_info.png",rotate:false},
+{id:"mhw",kr:"해양열파",img:"images/mhw_card.png",descImg:"images/mhw_info.png",rotate:false},
+{id:"precip",kr:"해상강수량",img:"images/precip_card.png",descImg:"images/precip_info.png",rotate:false},
+{id:"pressure",kr:"해면기압",img:"images/pressure_card.png",descImg:"images/pressure_info.png",rotate:false},
+{id:"river",kr:"하천 담수 유입량",img:"images/river_card.png",descImg:"images/river_info.png",rotate:false},
+{id:"salinity",kr:"해면염분",img:"images/salinity_card.png",descImg:"images/salinity_info.png",rotate:false},
+{id:"sea_ice",kr:"해빙",img:"images/sea_ice_card.png",descImg:"images/sea_ice_info.png",rotate:false},
+{id:"sea_level",kr:"해수면",img:"images/sea_level_card.png",descImg:"images/sea_level_info.png",rotate:false},
+{id:"sst",kr:"해면수온",img:"images/sst_card.png",descImg:"images/sst_info.png",rotate:false},
+{id:"typhoon",kr:"태풍",img:"images/typhoon_card.png",descImg:"images/typhoon_info.png",rotate:false},
+{id:"wave",kr:"유의파고",img:"images/wave_card.png",descImg:"images/wave_info.png",rotate:false},
+{id:"wind",kr:"해상풍",img:"images/wind_card.png",descImg:"images/wind_info.png",rotate:false}
+];
+
+let first=null,second=null,lock=false,moves=0,matches=0,elapsed=0,timer=null,started=false;
+let currentCols=8,currentRows=4,targetPairs=16;
+const board=document.getElementById("board");
+const cols=document.getElementById("cols"),rows=document.getElementById("rows");
+const total=document.getElementById("total"),msg=document.getElementById("msg"),apply=document.getElementById("apply");
+
+function shuffle(a){a=[...a];for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function fmt(s){return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+function beginTimer(){if(started)return;started=true;timer=setInterval(()=>{elapsed++;document.getElementById("time").textContent=fmt(elapsed)},1000)}
+
+function validate(){
+  const c=+cols.value,r=+rows.value,n=c*r;
+  total.textContent=n;
+  let ok=true,text="총 카드 수는 짝수여야 하며, 보유한 주제가 16개라 최대 32장까지 선택할 수 있습니다.";
+  if(n>DATA.length*2){ok=false;text=`주제가 ${DATA.length}개뿐이라 최대 ${DATA.length*2}장까지 선택할 수 있어요.`}
+  else if(n%2){ok=false;text="총 카드 수가 짝수가 되도록 선택해주세요."}
+  else if(n<4){ok=false;text="최소 4장 이상 선택해주세요."}
+  apply.disabled=!ok; msg.textContent=text; msg.classList.toggle("error",!ok);
+  return {ok,c,r,n};
+}
+
+function makeCard(x){
+  const el=document.createElement("div");
+  el.className="card"; el.dataset.id=x.id;
+  el.innerHTML=`<div class="card-zoom"><div class="inner">
+    <div class="face back"><img src="images/card_back.png" alt="카드 뒷면"></div>
+    <div class="face front"><img src="${x.img}" alt="${x.kr}" class="${x.rotate?'rot-fix':''}"></div>
+  </div></div>`;
+  el.onclick=()=>flip(el,x);
+  return el;
+}
+
+function flip(card,data){
+  if(lock||card.classList.contains("flipped")||card.classList.contains("matched"))return;
+  beginTimer(); card.classList.add("flipped");
+  if(!first){first={card,data};return}
+  second={card,data};moves++;document.getElementById("moves").textContent=moves;
+  if(first.data.id===second.data.id){
+    first.card.classList.add("matched");second.card.classList.add("matched");matches++;
+    document.getElementById("matches").textContent=matches;
+    showMatch(first.data);
+    resetTurn();
+    if(matches===targetPairs){
+      clearInterval(timer);
+      setTimeout(()=>{
+        document.getElementById("finalMoves").textContent=moves;
+        document.getElementById("finalTime").textContent=fmt(elapsed);
+        document.getElementById("finish").classList.add("show");
+      },400);
+    }
+  }else{
+    lock=true;
+    setTimeout(()=>{first.card.classList.remove("flipped");second.card.classList.remove("flipped");resetTurn()},850);
+  }
+}
+function resetTurn(){first=null;second=null;lock=false}
+
+function startGame(c,r){
+  clearInterval(timer);
+  currentCols=c;currentRows=r;targetPairs=c*r/2;
+  first=second=null;lock=false;moves=matches=elapsed=0;started=false;
+  document.getElementById("moves").textContent="0";
+  document.getElementById("matches").textContent="0";
+  document.getElementById("target").textContent=targetPairs;
+  document.getElementById("time").textContent="0:00";
+  document.getElementById("finish").classList.remove("show");
+
+  const types=shuffle(DATA).slice(0,targetPairs);
+  const deck=shuffle([...types,...types]);
+  board.style.gridTemplateColumns=`repeat(${c},minmax(0,1fr))`;
+  board.style.maxWidth=Math.min(c*145,1180)+"px";
+  board.innerHTML="";
+  deck.forEach(x=>board.appendChild(makeCard(x)));
+}
+
+function peek(){
+  if(lock||started)return;
+  const cards=[...document.querySelectorAll(".card")];
+  cards.forEach(c=>c.classList.add("flipped"));lock=true;
+  setTimeout(()=>{cards.forEach(c=>c.classList.remove("flipped"));lock=false},3000);
+}
+
+/* ── 매칭 성공 팝업 (설명 이미지) ── */
+const matchOverlay=document.getElementById("matchOverlay");
+function showMatch(data){
+  document.getElementById("matchImg").src=data.descImg;
+  matchOverlay.classList.add("show");
+}
+document.getElementById("matchClose").onclick=()=>matchOverlay.classList.remove("show");
+matchOverlay.addEventListener("click",e=>{if(e.target===matchOverlay)matchOverlay.classList.remove("show")});
+document.getElementById("matchImg").onclick=()=>openLightbox(document.getElementById("matchImg").src);
+
+/* ── 게임 인트로 ── */
+document.getElementById("introStartBtn").onclick=()=>document.getElementById("introOverlay").classList.add("hide");
+
+/* ── 학습 가이드 갤러리 ── */
+const guideGrid=document.getElementById("guideGrid");
+DATA.forEach(x=>{
+  const img=document.createElement("img");
+  img.src=x.descImg;img.alt=x.kr;
+  img.onclick=()=>openLightbox(x.descImg);
+  guideGrid.appendChild(img);
+});
+const guideOverlay=document.getElementById("guideOverlay");
+document.getElementById("guideOpenBtn").onclick=()=>guideOverlay.classList.add("show");
+document.getElementById("guideCloseBtn").onclick=()=>guideOverlay.classList.remove("show");
+guideOverlay.addEventListener("click",e=>{if(e.target===guideOverlay)guideOverlay.classList.remove("show")});
+
+/* ── 이미지 확대 라이트박스 (카드 속 글자를 크게 보고 싶을 때) ── */
+const lightboxOverlay=document.getElementById("lightboxOverlay");
+const lightboxImg=document.getElementById("lightboxImg");
+function openLightbox(src){ lightboxImg.src=src; lightboxOverlay.classList.add("show"); }
+document.getElementById("lightboxClose").onclick=()=>lightboxOverlay.classList.remove("show");
+lightboxOverlay.addEventListener("click",e=>{if(e.target===lightboxOverlay)lightboxOverlay.classList.remove("show")});
+
+cols.onchange=validate;rows.onchange=validate;
+apply.onclick=()=>{const v=validate();if(v.ok)startGame(v.c,v.r)};
+document.getElementById("restart").onclick=()=>startGame(currentCols,currentRows);
+document.getElementById("peek").onclick=peek;
+document.getElementById("again").onclick=()=>startGame(currentCols,currentRows);
+
+validate();startGame(8,4);
+</script>
+</body>
+</html>
